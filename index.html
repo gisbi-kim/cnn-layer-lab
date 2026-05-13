@@ -91,6 +91,20 @@
       align-items: center;
     }
 
+    .toggle-label {
+      display: inline-flex;
+      flex-direction: row;
+      gap: 7px;
+      align-items: center;
+      height: 38px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfd;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
     label {
       display: inline-grid;
       gap: 4px;
@@ -113,6 +127,13 @@
     input {
       width: 88px;
       padding: 0 9px;
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      padding: 0;
+      accent-color: var(--blue);
     }
 
     select {
@@ -482,6 +503,91 @@
       text-align: left;
     }
 
+    .matrix-wrap,
+    .experiment-wrap {
+      margin-top: 14px;
+      overflow-x: auto;
+    }
+
+    .confusion-table,
+    .experiment-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .confusion-table th,
+    .confusion-table td,
+    .experiment-table th,
+    .experiment-table td {
+      border: 1px solid var(--line);
+      padding: 6px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .confusion-table th {
+      background: #f4f7f9;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .confusion-table td.diagonal {
+      background: #edf7f1;
+      color: var(--green);
+      font-weight: 750;
+    }
+
+    .confusion-table td.off-diagonal.hot {
+      background: #fff5e8;
+      color: var(--orange);
+      font-weight: 750;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .gallery-group {
+      margin-top: 14px;
+    }
+
+    .gallery-group h3 {
+      margin-bottom: 8px;
+    }
+
+    .gallery-tile {
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    .gallery-tile.correct {
+      border-color: #b8dec9;
+    }
+
+    .gallery-tile.wrong {
+      border-color: #f1c08e;
+    }
+
+    .gallery-tile canvas {
+      width: 54px;
+      height: 54px;
+      image-rendering: pixelated;
+      background: #111820;
+      border-radius: 4px;
+    }
+
     .chart {
       height: 150px;
       width: 100%;
@@ -557,6 +663,72 @@
       border-radius: 4px;
     }
 
+    .filter-grid {
+      display: grid;
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .filter-layer {
+      display: grid;
+      gap: 8px;
+    }
+
+    .filter-tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+      gap: 8px;
+    }
+
+    .filter-tile {
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .filter-tile canvas {
+      width: 46px;
+      height: 46px;
+      image-rendering: pixelated;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: #f4f7f9;
+    }
+
+    .draw-lab {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .draw-area {
+      display: grid;
+      grid-template-columns: 154px 1fr;
+      gap: 16px;
+      align-items: start;
+      margin-top: 10px;
+    }
+
+    #drawCanvas {
+      width: 140px;
+      height: 140px;
+      image-rendering: pixelated;
+      background: #111820;
+      border-radius: 6px;
+      border: 1px solid #0f1720;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .draw-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
     .note-list {
       margin: 10px 0 0;
       padding-left: 20px;
@@ -598,6 +770,7 @@
       .eval-grid,
       .weight-lab,
       .sample-area,
+      .draw-area,
       .status-strip {
         grid-template-columns: 1fr;
       }
@@ -668,6 +841,10 @@
         <label>
           목표 Epoch
           <input id="epochInput" type="number" min="1" max="100" step="1" value="100">
+        </label>
+        <label class="toggle-label">
+          <input id="augmentToggle" type="checkbox">
+          학습 augmentation
         </label>
       </div>
       <div class="controls">
@@ -921,6 +1098,19 @@
             <div id="predictionList" class="prediction-list" aria-label="예측 확률"></div>
           </div>
         </div>
+        <div class="draw-lab">
+          <h3>직접 그린 입력 테스트</h3>
+          <div class="draw-area">
+            <canvas id="drawCanvas" width="28" height="28"></canvas>
+            <div>
+              <div class="draw-controls">
+                <button id="drawPredictBtn" class="secondary">그린 입력 예측</button>
+                <button id="drawClearBtn">지우기</button>
+              </div>
+              <div id="drawPredictionList" class="prediction-list" aria-label="직접 그린 입력 예측 확률"></div>
+            </div>
+          </div>
+        </div>
       </article>
 
       <article class="panel">
@@ -947,6 +1137,9 @@
           </thead>
           <tbody id="modelTableBody"></tbody>
         </table>
+        <div class="filter-grid" id="filterGrid">
+          <p>모델을 만들면 convolution 필터 weight가 표시됩니다.</p>
+        </div>
       </article>
 
       <article id="layerPanel" class="panel">
@@ -988,6 +1181,32 @@
       <div id="evalReport" class="eval-report">
         데이터를 로드한 뒤 평가할 수 있습니다. 학습 전과 각 epoch 후 결과를 비교해 보세요.
       </div>
+      <div id="confusionMatrix" class="matrix-wrap" aria-label="confusion matrix"></div>
+      <div id="sampleGallery" aria-label="정답과 오답 샘플 갤러리"></div>
+      <div class="experiment-wrap">
+        <div class="controls">
+          <h3>실험 기록표</h3>
+          <button id="clearExperimentBtn">기록 지우기</button>
+        </div>
+        <table class="experiment-table" aria-label="실험 기록표">
+          <thead>
+            <tr>
+              <th>시간</th>
+              <th>학습/weight</th>
+              <th>평가 데이터셋</th>
+              <th>Conv</th>
+              <th>Epoch</th>
+              <th>Train</th>
+              <th>Test</th>
+              <th>Aug</th>
+              <th>Accuracy</th>
+            </tr>
+          </thead>
+          <tbody id="experimentTableBody">
+            <tr><td colspan="9">아직 평가 기록이 없습니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="panel">
@@ -1016,6 +1235,7 @@
     const EVAL_SEED = 20260513;
     const WEIGHT_META_KEY = 'cnn-layer-lab-weight-metadata-v1';
     const WEIGHT_ID_PREFIX = 'cnn-layer-lab';
+    const EXPERIMENT_LOG_KEY = 'cnn-layer-lab-experiment-log-v1';
     const MNIST_IMAGES_PATH = 'https://storage.googleapis.com/learnjs-data/model-builder/mnist_images.png';
     const MNIST_LABELS_PATH = 'https://storage.googleapis.com/learnjs-data/model-builder/mnist_labels_uint8';
     const FASHION_IMAGES_PATH = 'https://storage.googleapis.com/learnjs-data/model-builder/fashion_mnist_images.png';
@@ -1102,7 +1322,12 @@
       convLayerCount: 2,
       currentIndex: 0,
       trainedEpochs: 0,
-      history: []
+      history: [],
+      modelSource: {
+        type: 'fresh',
+        name: '새 모델',
+        datasetName: '아직 학습 전'
+      }
     };
 
     const els = {
@@ -1117,6 +1342,7 @@
       datasetSelect: document.querySelector('#datasetSelect'),
       convLayerSelect: document.querySelector('#convLayerSelect'),
       savedWeightSelect: document.querySelector('#savedWeightSelect'),
+      augmentToggle: document.querySelector('#augmentToggle'),
       trainSizeInput: document.querySelector('#trainSizeInput'),
       testSizeInput: document.querySelector('#testSizeInput'),
       epochInput: document.querySelector('#epochInput'),
@@ -1129,14 +1355,23 @@
       sampleCanvas: document.querySelector('#sampleCanvas'),
       sampleLabel: document.querySelector('#sampleLabel'),
       predictionList: document.querySelector('#predictionList'),
+      drawCanvas: document.querySelector('#drawCanvas'),
+      drawPredictBtn: document.querySelector('#drawPredictBtn'),
+      drawClearBtn: document.querySelector('#drawClearBtn'),
+      drawPredictionList: document.querySelector('#drawPredictionList'),
       modelTableBody: document.querySelector('#modelTableBody'),
       modelBadge: document.querySelector('#modelBadge'),
+      filterGrid: document.querySelector('#filterGrid'),
       featureGrid: document.querySelector('#featureGrid'),
       evalScopeText: document.querySelector('#evalScopeText'),
       evalCountText: document.querySelector('#evalCountText'),
       evalCorrectText: document.querySelector('#evalCorrectText'),
       evalAccText: document.querySelector('#evalAccText'),
       evalReport: document.querySelector('#evalReport'),
+      confusionMatrix: document.querySelector('#confusionMatrix'),
+      sampleGallery: document.querySelector('#sampleGallery'),
+      experimentTableBody: document.querySelector('#experimentTableBody'),
+      clearExperimentBtn: document.querySelector('#clearExperimentBtn'),
       weightNote: document.querySelector('#weightNote'),
       lossChart: document.querySelector('#lossChart')
     };
@@ -1157,6 +1392,73 @@
 
     function selectedDatasetName() {
       return els.datasetSelect.options[els.datasetSelect.selectedIndex]?.textContent || els.datasetSelect.value;
+    }
+
+    function modelSourceText() {
+      if (state.modelSource?.type === 'pretrained') {
+        return `pretrained: ${state.modelSource.name}`;
+      }
+      if (state.trainedEpochs > 0) {
+        return `${state.modelSource?.datasetName || selectedDatasetName()} 직접 학습`;
+      }
+      return `${selectedDatasetName()} 초기 weight`;
+    }
+
+    function readExperimentLog() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(EXPERIMENT_LOG_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function writeExperimentLog(records) {
+      localStorage.setItem(EXPERIMENT_LOG_KEY, JSON.stringify(records));
+    }
+
+    function renderExperimentLog() {
+      const records = readExperimentLog();
+      if (!records.length) {
+        els.experimentTableBody.innerHTML = '<tr><td colspan="9">아직 평가 기록이 없습니다.</td></tr>';
+        return;
+      }
+      els.experimentTableBody.innerHTML = records.map((record) => `
+        <tr>
+          <td>${formatStoredTime(record.time)}</td>
+          <td>${record.source}</td>
+          <td>${record.evalDataset}</td>
+          <td>${record.convLayerCount}</td>
+          <td>${record.trainedEpochs}</td>
+          <td>${record.trainSize}</td>
+          <td>${record.testSize}</td>
+          <td>${record.augmentation ? 'on' : 'off'}</td>
+          <td>${(record.accuracy * 100).toFixed(1)}%</td>
+        </tr>
+      `).join('');
+    }
+
+    function appendExperimentLog(result) {
+      const record = {
+        time: new Date().toISOString(),
+        source: modelSourceText(),
+        evalDataset: selectedDatasetName(),
+        convLayerCount: state.convLayerCount,
+        trainedEpochs: state.trainedEpochs,
+        trainSize: Number(els.trainSizeInput.value),
+        testSize: result.total,
+        augmentation: els.augmentToggle.checked,
+        accuracy: result.accuracy
+      };
+      const records = readExperimentLog();
+      records.unshift(record);
+      writeExperimentLog(records.slice(0, 40));
+      renderExperimentLog();
+    }
+
+    function clearExperimentLog() {
+      writeExperimentLog([]);
+      renderExperimentLog();
     }
 
     function readWeightEntries() {
@@ -1192,8 +1494,9 @@
       const epochPart = `ep${state.trainedEpochs}`;
       const trainPart = `train${Number(els.trainSizeInput.value)}`;
       const layerPart = `conv${state.convLayerCount}`;
+      const augPart = els.augmentToggle.checked ? '_aug' : '';
       const timePart = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '');
-      return `${datasetName}__${layerPart}_${epochPart}_${trainPart}_${timePart}`;
+      return `${datasetName}__${layerPart}_${epochPart}_${trainPart}${augPart}_${timePart}`;
     }
 
     function refreshWeightSelect(selectedId = '') {
@@ -1302,6 +1605,72 @@
         row.innerHTML = `<td>${layer.name}</td><td>${describeLayer(layer)}</td><td>${shape}</td>`;
         els.modelTableBody.appendChild(row);
       });
+    }
+
+    function drawKernelTile(canvas, values, shape, outChannel) {
+      const [kernelH, kernelW, inChannels, outChannels] = shape;
+      const collapsed = [];
+      for (let y = 0; y < kernelH; y++) {
+        for (let x = 0; x < kernelW; x++) {
+          let sum = 0;
+          for (let ic = 0; ic < inChannels; ic++) {
+            const idx = (((y * kernelW + x) * inChannels + ic) * outChannels) + outChannel;
+            sum += values[idx];
+          }
+          collapsed.push(sum / inChannels);
+        }
+      }
+      const min = Math.min(...collapsed);
+      const max = Math.max(...collapsed);
+      const span = Math.max(max - min, 1e-6);
+      const ctx = canvas.getContext('2d');
+      canvas.width = kernelW;
+      canvas.height = kernelH;
+      const imageData = ctx.createImageData(kernelW, kernelH);
+      collapsed.forEach((value, i) => {
+        const v = Math.round(((value - min) / span) * 255);
+        imageData.data[i * 4] = v;
+        imageData.data[i * 4 + 1] = v;
+        imageData.data[i * 4 + 2] = v;
+        imageData.data[i * 4 + 3] = 255;
+      });
+      ctx.putImageData(imageData, 0, 0);
+    }
+
+    async function renderFilterWeights() {
+      if (!state.model) return;
+      els.filterGrid.innerHTML = '';
+      const convLayers = state.model.layers.filter((layer) => layer.name.startsWith('conv'));
+      if (!convLayers.length) {
+        els.filterGrid.innerHTML = '<p>표시할 convolution 필터가 없습니다.</p>';
+        return;
+      }
+
+      for (const layer of convLayers) {
+        const [kernel] = layer.getWeights();
+        if (!kernel) continue;
+        const values = await kernel.data();
+        const shape = kernel.shape;
+        const outChannels = shape[3];
+        const section = document.createElement('section');
+        section.className = 'filter-layer';
+        const title = document.createElement('h3');
+        title.textContent = `${layer.name} filter weights (${shape.join('x')})`;
+        const grid = document.createElement('div');
+        grid.className = 'filter-tiles';
+        for (let oc = 0; oc < Math.min(outChannels, 32); oc++) {
+          const tile = document.createElement('div');
+          tile.className = 'filter-tile';
+          const canvas = document.createElement('canvas');
+          drawKernelTile(canvas, values, shape, oc);
+          const label = document.createElement('span');
+          label.textContent = `f ${oc + 1}`;
+          tile.append(canvas, label);
+          grid.appendChild(tile);
+        }
+        section.append(title, grid);
+        els.filterGrid.appendChild(section);
+      }
     }
 
     async function loadImageElement(src) {
@@ -1527,8 +1896,8 @@
       renderPredictions(probs);
     }
 
-    function renderPredictions(probs) {
-      els.predictionList.innerHTML = '';
+    function renderPredictionBars(container, probs) {
+      container.innerHTML = '';
       probs
         .map((prob, label) => ({ prob, label }))
         .sort((a, b) => b.prob - a.prob)
@@ -1540,8 +1909,74 @@
             <div class="bar-track"><div class="bar-fill" style="width:${(item.prob * 100).toFixed(1)}%"></div></div>
             <span>${(item.prob * 100).toFixed(1)}%</span>
           `;
-          els.predictionList.appendChild(row);
+          container.appendChild(row);
         });
+    }
+
+    function renderPredictions(probs) {
+      renderPredictionBars(els.predictionList, probs);
+    }
+
+    function clearDrawCanvas() {
+      const ctx = els.drawCanvas.getContext('2d');
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, els.drawCanvas.width, els.drawCanvas.height);
+      els.drawPredictionList.innerHTML = '<p>캔버스에 그린 뒤 예측해 보세요.</p>';
+    }
+
+    function drawOnCanvas(event) {
+      const rect = els.drawCanvas.getBoundingClientRect();
+      const scaleX = els.drawCanvas.width / rect.width;
+      const scaleY = els.drawCanvas.height / rect.height;
+      const x = (event.clientX - rect.left) * scaleX;
+      const y = (event.clientY - rect.top) * scaleY;
+      const ctx = els.drawCanvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x, y, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function tensorFromDrawCanvas() {
+      const ctx = els.drawCanvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, els.drawCanvas.width, els.drawCanvas.height);
+      const pixels = new Float32Array(IMAGE_SIZE);
+      for (let i = 0; i < IMAGE_SIZE; i++) {
+        pixels[i] = imageData.data[i * 4] / 255;
+      }
+      return tf.tensor4d(pixels, [1, 28, 28, 1]);
+    }
+
+    async function predictDrawnInput() {
+      if (!state.model) return;
+      const pred = tf.tidy(() => {
+        const input = tensorFromDrawCanvas();
+        const output = state.model.predict(input);
+        input.dispose();
+        return output;
+      });
+      const probs = Array.from(await pred.data());
+      pred.dispose();
+      renderPredictionBars(els.drawPredictionList, probs);
+    }
+
+    function initDrawCanvas() {
+      clearDrawCanvas();
+      let drawing = false;
+      els.drawCanvas.addEventListener('pointerdown', (event) => {
+        drawing = true;
+        els.drawCanvas.setPointerCapture(event.pointerId);
+        drawOnCanvas(event);
+      });
+      els.drawCanvas.addEventListener('pointermove', (event) => {
+        if (drawing) drawOnCanvas(event);
+      });
+      els.drawCanvas.addEventListener('pointerup', () => {
+        drawing = false;
+      });
+      els.drawCanvas.addEventListener('pointercancel', () => {
+        drawing = false;
+      });
     }
 
     function drawLossChart() {
@@ -1582,6 +2017,7 @@
 
     async function refreshAfterModelChange(noteText) {
       renderModelTable();
+      await renderFilterWeights();
       if (noteText) setWeightNote(noteText);
       if (!state.testXs) {
         resetEvaluationReport();
@@ -1591,6 +2027,7 @@
       drawSample(state.currentIndex);
       await predictCurrentSample();
       await inspectLayer();
+      await renderFilterWeights();
       await evaluateFullTestSet();
     }
 
@@ -1608,6 +2045,80 @@
       els.evalCorrectText.textContent = '-';
       els.evalAccText.textContent = '-';
       els.evalReport.textContent = '데이터를 로드한 뒤 평가할 수 있습니다. 학습 전과 각 epoch 후 결과를 비교해 보세요.';
+      els.confusionMatrix.innerHTML = '';
+      els.sampleGallery.innerHTML = '';
+    }
+
+    function renderConfusionMatrix(matrix) {
+      const headerCells = state.labelNames.map((label) => `<th>${label}</th>`).join('');
+      const rows = matrix.map((row, truth) => {
+        const cells = row.map((count, pred) => {
+          const className = truth === pred ? 'diagonal' : count > 0 ? 'off-diagonal hot' : 'off-diagonal';
+          return `<td class="${className}">${count}</td>`;
+        }).join('');
+        return `<tr><th>${state.labelNames[truth]}</th>${cells}</tr>`;
+      }).join('');
+      els.confusionMatrix.innerHTML = `
+        <h3>Confusion matrix</h3>
+        <table class="confusion-table" aria-label="정답 예측 confusion matrix">
+          <thead><tr><th>정답 \\ 예측</th>${headerCells}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function drawImageFromTestSet(canvas, index) {
+      const ctx = canvas.getContext('2d');
+      const image = tf.tidy(() => state.testXs.slice([index, 0, 0, 0], [1, 28, 28, 1]).reshape([28, 28]));
+      const pixels = image.dataSync();
+      const imageData = ctx.createImageData(28, 28);
+      for (let i = 0; i < pixels.length; i++) {
+        const v = Math.round(pixels[i] * 255);
+        imageData.data[i * 4] = v;
+        imageData.data[i * 4 + 1] = v;
+        imageData.data[i * 4 + 2] = v;
+        imageData.data[i * 4 + 3] = 255;
+      }
+      ctx.putImageData(imageData, 0, 0);
+      image.dispose();
+    }
+
+    function makeGalleryTile(example, kind) {
+      const tile = document.createElement('div');
+      tile.className = `gallery-tile ${kind}`;
+      const canvas = document.createElement('canvas');
+      canvas.width = 28;
+      canvas.height = 28;
+      drawImageFromTestSet(canvas, example.index);
+      const text = document.createElement('span');
+      text.textContent = `정답 ${labelSetText(example.truthSet)} / 예측 ${state.labelNames[example.pred]}`;
+      tile.append(canvas, text);
+      return tile;
+    }
+
+    function renderSampleGallery(correctExamples, wrongExamples) {
+      els.sampleGallery.innerHTML = '';
+      const groups = [
+        { title: '잘 맞힌 샘플', examples: correctExamples, kind: 'correct' },
+        { title: '틀린 샘플', examples: wrongExamples, kind: 'wrong' }
+      ];
+      groups.forEach((group) => {
+        const section = document.createElement('div');
+        section.className = 'gallery-group';
+        const title = document.createElement('h3');
+        title.textContent = group.title;
+        const grid = document.createElement('div');
+        grid.className = 'gallery-grid';
+        if (group.examples.length) {
+          group.examples.forEach((example) => grid.appendChild(makeGalleryTile(example, group.kind)));
+        } else {
+          const empty = document.createElement('p');
+          empty.textContent = '표시할 샘플이 없습니다.';
+          grid.appendChild(empty);
+        }
+        section.append(title, grid);
+        els.sampleGallery.appendChild(section);
+      });
     }
 
     async function evaluateFullTestSet() {
@@ -1623,13 +2134,20 @@
 
       let correct = 0;
       const mistakes = new Map();
+      const confusion = Array.from({ length: NUM_CLASSES }, () => Array(NUM_CLASSES).fill(0));
+      const correctExamples = [];
+      const wrongExamples = [];
       for (let i = 0; i < state.testLabels.length; i++) {
         const truthSet = state.testLabelSets[i] || [state.testLabels[i]];
+        const primaryTruth = truthSet[0];
         const pred = predictedLabels[i];
+        confusion[primaryTruth][pred] += 1;
         if (truthSet.includes(pred)) {
           correct += 1;
+          if (correctExamples.length < 8) correctExamples.push({ index: i, truthSet, pred });
         } else {
-          const key = `${labelSetText(truthSet)}->${pred}`;
+          if (wrongExamples.length < 8) wrongExamples.push({ index: i, truthSet, pred });
+          const key = `${labelSetText(truthSet)}->${state.labelNames[pred]}`;
           mistakes.set(key, (mistakes.get(key) || 0) + 1);
         }
       }
@@ -1659,7 +2177,11 @@
           <tbody>${rows}</tbody>
         </table>
       `;
+      renderConfusionMatrix(confusion);
+      renderSampleGallery(correctExamples, wrongExamples);
+      appendExperimentLog({ total, correct, accuracy });
       els.evalBtn.disabled = false;
+      return { total, correct, accuracy, confusion };
     }
 
     function renderActivationTiles(container, values, shape) {
@@ -1750,6 +2272,7 @@
         trainedEpochs: state.trainedEpochs,
         trainSize: Number(els.trainSizeInput.value),
         testSize: Number(els.testSizeInput.value),
+        augmentation: els.augmentToggle.checked,
         savedAt: new Date().toISOString()
       };
 
@@ -1786,6 +2309,11 @@
         if (state.model) state.model.dispose();
         state.model = loadedModel;
         state.convLayerCount = entry.convLayerCount;
+        state.modelSource = {
+          type: 'pretrained',
+          name: entry.name,
+          datasetName: entry.datasetName
+        };
         if (els.convLayerSelect.querySelector(`option[value="${entry.convLayerCount}"]`)) {
           els.convLayerSelect.value = String(entry.convLayerCount);
         }
@@ -1840,7 +2368,13 @@
       disposeData();
       if (state.model) state.model.dispose();
       state.model = createModel();
+      state.modelSource = {
+        type: 'fresh',
+        name: selectedDatasetName(),
+        datasetName: selectedDatasetName()
+      };
       renderModelTable();
+      await renderFilterWeights();
       state.trainedEpochs = 0;
       state.history = [];
       els.epochText.textContent = `0 / ${targetEpochs()}`;
@@ -1879,6 +2413,29 @@
       }
     }
 
+    function augmentTrainingImages(xs) {
+      return tf.tidy(() => {
+        const contrast = tf.randomUniform([xs.shape[0], 1, 1, 1], 0.75, 1.25);
+        const brightness = tf.randomUniform([xs.shape[0], 1, 1, 1], -0.08, 0.08);
+        const noise = tf.randomNormal(xs.shape, 0, 0.055);
+        let augmented = xs.sub(0.5).mul(contrast).add(0.5).add(brightness).add(noise).clipByValue(0, 1);
+        const dx = Math.floor(Math.random() * 5) - 2;
+        const dy = Math.floor(Math.random() * 5) - 2;
+        if (dx !== 0 || dy !== 0) {
+          const padTop = Math.max(dy, 0);
+          const padBottom = Math.max(-dy, 0);
+          const padLeft = Math.max(dx, 0);
+          const padRight = Math.max(-dx, 0);
+          const startY = Math.max(-dy, 0);
+          const startX = Math.max(-dx, 0);
+          augmented = augmented
+            .pad([[0, 0], [padTop, padBottom], [padLeft, padRight], [0, 0]])
+            .slice([0, startY, startX, 0], [xs.shape[0], IMAGE_HEIGHT, IMAGE_WIDTH, 1]);
+        }
+        return augmented;
+      });
+    }
+
     async function handleTrain() {
       if (!state.model || !state.trainXs) return;
       const target = targetEpochs();
@@ -1895,32 +2452,42 @@
       els.saveWeightBtn.disabled = true;
       els.loadWeightBtn.disabled = true;
       els.deleteWeightBtn.disabled = true;
-      setStatus(`${state.trainedEpochs + 1}번째 epoch 학습 중`);
+      setStatus(`${state.trainedEpochs + 1}번째 epoch 학습 중${els.augmentToggle.checked ? ' (augmentation)' : ''}`);
       setTrainProgress(0, '0% - batch 준비 중');
       const trainBatches = Math.ceil(Number(els.trainSizeInput.value) * 0.85 / 64);
+      const fitXs = els.augmentToggle.checked ? augmentTrainingImages(state.trainXs) : state.trainXs;
 
-      await state.model.fit(state.trainXs, state.trainYs, {
-        epochs: 1,
-        batchSize: 64,
-        validationSplit: 0.15,
-        callbacks: {
-          onBatchEnd: async (batch, logs) => {
-            const percent = Math.min(99, Math.round(((batch + 1) / trainBatches) * 100));
-            setStatus(`${state.trainedEpochs + 1}번째 epoch 학습 중 ${percent}%`);
-            setTrainProgress(percent, `${percent}% - batch ${batch + 1} / ${trainBatches}`);
-            await tf.nextFrame();
-          },
-          onEpochEnd: async (epoch, logs) => {
-            state.trainedEpochs += 1;
-            state.history.push({ loss: logs.loss, valLoss: logs.val_loss });
-            els.epochText.textContent = `${state.trainedEpochs} / ${target}`;
-            els.lossText.textContent = logs.loss.toFixed(4);
-            setTrainProgress(100, '100% - 평가와 feature map 갱신 중');
-            drawLossChart();
-            await tf.nextFrame();
+      try {
+        await state.model.fit(fitXs, state.trainYs, {
+          epochs: 1,
+          batchSize: 64,
+          validationSplit: 0.15,
+          callbacks: {
+            onBatchEnd: async (batch, logs) => {
+              const percent = Math.min(99, Math.round(((batch + 1) / trainBatches) * 100));
+              setStatus(`${state.trainedEpochs + 1}번째 epoch 학습 중 ${percent}%${els.augmentToggle.checked ? ' (augmentation)' : ''}`);
+              setTrainProgress(percent, `${percent}% - batch ${batch + 1} / ${trainBatches}`);
+              await tf.nextFrame();
+            },
+            onEpochEnd: async (epoch, logs) => {
+              state.trainedEpochs += 1;
+              state.history.push({ loss: logs.loss, valLoss: logs.val_loss });
+              state.modelSource = {
+                type: 'trained',
+                name: selectedDatasetName(),
+                datasetName: selectedDatasetName()
+              };
+              els.epochText.textContent = `${state.trainedEpochs} / ${target}`;
+              els.lossText.textContent = logs.loss.toFixed(4);
+              setTrainProgress(100, '100% - 평가와 feature map 갱신 중');
+              drawLossChart();
+              await tf.nextFrame();
+            }
           }
-        }
-      });
+        });
+      } finally {
+        if (fitXs !== state.trainXs) fitXs.dispose();
+      }
 
       await predictCurrentSample();
       await inspectLayer();
@@ -1957,6 +2524,9 @@
     els.saveWeightBtn.addEventListener('click', handleSaveWeights);
     els.loadWeightBtn.addEventListener('click', handleLoadWeights);
     els.deleteWeightBtn.addEventListener('click', handleDeleteWeight);
+    els.drawPredictBtn.addEventListener('click', predictDrawnInput);
+    els.drawClearBtn.addEventListener('click', clearDrawCanvas);
+    els.clearExperimentBtn.addEventListener('click', clearExperimentLog);
     els.convLayerSelect.addEventListener('change', () => {
       setStatus('레이어 수 변경 - 데이터 로드 필요');
       setTrainProgress(0, '데이터 로드 필요');
@@ -1974,8 +2544,11 @@
 
     state.model = createModel();
     renderModelTable();
+    renderFilterWeights();
     updateTrainButton();
     refreshWeightSelect();
+    renderExperimentLog();
+    initDrawCanvas();
     resetEvaluationReport();
     drawLossChart();
   </script>
