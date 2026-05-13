@@ -448,6 +448,26 @@
       line-height: 1.55;
     }
 
+    .weight-lab {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .weight-lab label {
+      width: 100%;
+    }
+
+    .weight-lab select {
+      width: 100%;
+    }
+
+    .weight-note {
+      margin-top: 10px;
+      font-size: 13px;
+    }
+
     .eval-report table {
       width: 100%;
       border-collapse: collapse;
@@ -576,6 +596,7 @@
       .grid,
       .concept-grid,
       .eval-grid,
+      .weight-lab,
       .sample-area,
       .status-strip {
         grid-template-columns: 1fr;
@@ -679,6 +700,22 @@
         <span>Test accuracy</span>
         <strong id="accText">-</strong>
       </div>
+    </section>
+
+    <section class="panel">
+      <h2>저장된 weight로 generalization test</h2>
+      <div class="weight-lab">
+        <label>
+          저장된 weight
+          <select id="savedWeightSelect">
+            <option value="">저장된 weight 없음</option>
+          </select>
+        </label>
+        <button id="saveWeightBtn" class="secondary" disabled>현재 weight 저장</button>
+        <button id="loadWeightBtn" disabled>Pretrained weight 로드</button>
+        <button id="deleteWeightBtn" disabled>선택 weight 삭제</button>
+      </div>
+      <p id="weightNote" class="weight-note">예: MNIST 낮은 대비로 학습한 weight를 저장한 뒤, MNIST 원본 데이터를 로드하고 pretrained weight를 불러와 전체 평가를 실행합니다.</p>
     </section>
 
     <section class="panel cnn-explainer">
@@ -977,6 +1014,8 @@
     const LABELS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     const FASHION_LABELS = ['T-shirt', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot'];
     const EVAL_SEED = 20260513;
+    const WEIGHT_META_KEY = 'cnn-layer-lab-weight-metadata-v1';
+    const WEIGHT_ID_PREFIX = 'cnn-layer-lab';
     const MNIST_IMAGES_PATH = 'https://storage.googleapis.com/learnjs-data/model-builder/mnist_images.png';
     const MNIST_LABELS_PATH = 'https://storage.googleapis.com/learnjs-data/model-builder/mnist_labels_uint8';
     const FASHION_IMAGES_PATH = 'https://storage.googleapis.com/learnjs-data/model-builder/fashion_mnist_images.png';
@@ -1072,8 +1111,12 @@
       sampleBtn: document.querySelector('#sampleBtn'),
       inspectBtn: document.querySelector('#inspectBtn'),
       evalBtn: document.querySelector('#evalBtn'),
+      saveWeightBtn: document.querySelector('#saveWeightBtn'),
+      loadWeightBtn: document.querySelector('#loadWeightBtn'),
+      deleteWeightBtn: document.querySelector('#deleteWeightBtn'),
       datasetSelect: document.querySelector('#datasetSelect'),
       convLayerSelect: document.querySelector('#convLayerSelect'),
+      savedWeightSelect: document.querySelector('#savedWeightSelect'),
       trainSizeInput: document.querySelector('#trainSizeInput'),
       testSizeInput: document.querySelector('#testSizeInput'),
       epochInput: document.querySelector('#epochInput'),
@@ -1094,6 +1137,7 @@
       evalCorrectText: document.querySelector('#evalCorrectText'),
       evalAccText: document.querySelector('#evalAccText'),
       evalReport: document.querySelector('#evalReport'),
+      weightNote: document.querySelector('#weightNote'),
       lossChart: document.querySelector('#lossChart')
     };
 
@@ -1109,6 +1153,79 @@
 
     function targetEpochs() {
       return Number(els.epochInput.value);
+    }
+
+    function selectedDatasetName() {
+      return els.datasetSelect.options[els.datasetSelect.selectedIndex]?.textContent || els.datasetSelect.value;
+    }
+
+    function readWeightEntries() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(WEIGHT_META_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function writeWeightEntries(entries) {
+      localStorage.setItem(WEIGHT_META_KEY, JSON.stringify(entries));
+    }
+
+    function formatStoredTime(isoTime) {
+      const date = new Date(isoTime);
+      if (Number.isNaN(date.getTime())) return isoTime;
+      const pad = (value) => String(value).padStart(2, '0');
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function safeSlug(text) {
+      return text
+        .toLowerCase()
+        .replace(/[^a-z0-9가-힣]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 60) || 'model';
+    }
+
+    function makeWeightName() {
+      const datasetName = selectedDatasetName();
+      const epochPart = `ep${state.trainedEpochs}`;
+      const trainPart = `train${Number(els.trainSizeInput.value)}`;
+      const layerPart = `conv${state.convLayerCount}`;
+      const timePart = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '');
+      return `${datasetName}__${layerPart}_${epochPart}_${trainPart}_${timePart}`;
+    }
+
+    function refreshWeightSelect(selectedId = '') {
+      const entries = readWeightEntries();
+      els.savedWeightSelect.innerHTML = '';
+      if (!entries.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = '저장된 weight 없음';
+        els.savedWeightSelect.appendChild(option);
+        els.loadWeightBtn.disabled = true;
+        els.deleteWeightBtn.disabled = true;
+        return;
+      }
+      entries.forEach((entry) => {
+        const option = document.createElement('option');
+        option.value = entry.id;
+        option.textContent = `${entry.name} · 저장 ${formatStoredTime(entry.savedAt)}`;
+        els.savedWeightSelect.appendChild(option);
+      });
+      els.savedWeightSelect.value = selectedId || entries[0].id;
+      els.loadWeightBtn.disabled = false;
+      els.deleteWeightBtn.disabled = false;
+    }
+
+    function selectedWeightEntry() {
+      const selectedId = els.savedWeightSelect.value;
+      return readWeightEntries().find((entry) => entry.id === selectedId) || null;
+    }
+
+    function setWeightNote(text) {
+      els.weightNote.textContent = text;
     }
 
     function updateTrainButton() {
@@ -1463,6 +1580,20 @@
       ctx.fillText(`max loss ${maxLoss.toFixed(3)}`, 44, 24);
     }
 
+    async function refreshAfterModelChange(noteText) {
+      renderModelTable();
+      if (noteText) setWeightNote(noteText);
+      if (!state.testXs) {
+        resetEvaluationReport();
+        drawLossChart();
+        return;
+      }
+      drawSample(state.currentIndex);
+      await predictCurrentSample();
+      await inspectLayer();
+      await evaluateFullTestSet();
+    }
+
     async function evaluateModel() {
       const evalResult = state.model.evaluate(state.testXs, state.testYs, { batchSize: 128 });
       const accTensor = Array.isArray(evalResult) ? evalResult[1] : evalResult;
@@ -1604,12 +1735,107 @@
       }
     }
 
+    async function handleSaveWeights() {
+      if (!state.model) return;
+      els.saveWeightBtn.disabled = true;
+      setStatus('weight 저장 중');
+      const id = `${WEIGHT_ID_PREFIX}-${Date.now()}`;
+      const name = makeWeightName();
+      const entry = {
+        id,
+        name,
+        datasetValue: els.datasetSelect.value,
+        datasetName: selectedDatasetName(),
+        convLayerCount: state.convLayerCount,
+        trainedEpochs: state.trainedEpochs,
+        trainSize: Number(els.trainSizeInput.value),
+        testSize: Number(els.testSizeInput.value),
+        savedAt: new Date().toISOString()
+      };
+
+      try {
+        await state.model.save(`indexeddb://${id}`);
+        const entries = readWeightEntries().filter((item) => item.id !== id);
+        entries.unshift(entry);
+        writeWeightEntries(entries.slice(0, 30));
+        refreshWeightSelect(id);
+        setStatus('weight 저장 완료');
+        setWeightNote(`저장 완료: ${name}. 브라우저 IndexedDB에 저장되므로 같은 브라우저에서 다시 불러올 수 있습니다.`);
+      } catch (err) {
+        console.error(err);
+        setStatus('weight 저장 실패');
+        setWeightNote('저장에 실패했습니다. 브라우저 저장소 권한이나 용량을 확인하세요.');
+      } finally {
+        els.saveWeightBtn.disabled = !state.model;
+      }
+    }
+
+    async function handleLoadWeights() {
+      const entry = selectedWeightEntry();
+      if (!entry) return;
+      els.loadWeightBtn.disabled = true;
+      els.saveWeightBtn.disabled = true;
+      setStatus('pretrained weight 로드 중');
+      try {
+        const loadedModel = await tf.loadLayersModel(`indexeddb://${entry.id}`);
+        loadedModel.compile({
+          optimizer: tf.train.adam(0.001),
+          loss: 'categoricalCrossentropy',
+          metrics: ['accuracy']
+        });
+        if (state.model) state.model.dispose();
+        state.model = loadedModel;
+        state.convLayerCount = entry.convLayerCount;
+        if (els.convLayerSelect.querySelector(`option[value="${entry.convLayerCount}"]`)) {
+          els.convLayerSelect.value = String(entry.convLayerCount);
+        }
+        state.trainedEpochs = entry.trainedEpochs;
+        state.history = [];
+        els.epochText.textContent = `${state.trainedEpochs} / ${targetEpochs()}`;
+        els.lossText.textContent = '-';
+        drawLossChart();
+        updateTrainButton();
+        setStatus('pretrained weight 로드 완료');
+        const currentDataset = selectedDatasetName();
+        const note = `로드 완료: ${entry.name}. 학습 데이터셋은 ${entry.datasetName}, 현재 평가 데이터셋은 ${currentDataset}입니다.`;
+        await refreshAfterModelChange(note);
+        els.saveWeightBtn.disabled = false;
+      } catch (err) {
+        console.error(err);
+        setStatus('pretrained weight 로드 실패');
+        setWeightNote('로드에 실패했습니다. 저장된 weight가 삭제되었거나 브라우저 저장소가 초기화되었을 수 있습니다.');
+      } finally {
+        refreshWeightSelect(entry.id);
+      }
+    }
+
+    async function handleDeleteWeight() {
+      const entry = selectedWeightEntry();
+      if (!entry) return;
+      els.deleteWeightBtn.disabled = true;
+      els.loadWeightBtn.disabled = true;
+      setStatus('저장 weight 삭제 중');
+      try {
+        await tf.io.removeModel(`indexeddb://${entry.id}`);
+      } catch (err) {
+        console.warn('IndexedDB model already missing:', err);
+      }
+      const entries = readWeightEntries().filter((item) => item.id !== entry.id);
+      writeWeightEntries(entries);
+      refreshWeightSelect();
+      setStatus('저장 weight 삭제 완료');
+      setWeightNote(`삭제 완료: ${entry.name}`);
+    }
+
     async function handleLoad() {
       els.loadBtn.disabled = true;
       els.trainBtn.disabled = true;
       els.sampleBtn.disabled = true;
       els.inspectBtn.disabled = true;
       els.evalBtn.disabled = true;
+      els.saveWeightBtn.disabled = true;
+      els.loadWeightBtn.disabled = true;
+      els.deleteWeightBtn.disabled = true;
       setStatus('데이터 로드 중');
       disposeData();
       if (state.model) state.model.dispose();
@@ -1640,6 +1866,8 @@
         els.sampleBtn.disabled = false;
         els.inspectBtn.disabled = false;
         els.evalBtn.disabled = false;
+        els.saveWeightBtn.disabled = false;
+        refreshWeightSelect(els.savedWeightSelect.value);
         await evaluateFullTestSet();
       } catch (err) {
         console.error(err);
@@ -1647,6 +1875,7 @@
         els.sampleLabel.innerHTML = '<span class="warning">데이터를 불러오지 못했습니다. 인터넷 연결 또는 브라우저 콘솔을 확인하세요.</span>';
       } finally {
         els.loadBtn.disabled = false;
+        refreshWeightSelect(els.savedWeightSelect.value);
       }
     }
 
@@ -1663,6 +1892,9 @@
       els.sampleBtn.disabled = true;
       els.inspectBtn.disabled = true;
       els.evalBtn.disabled = true;
+      els.saveWeightBtn.disabled = true;
+      els.loadWeightBtn.disabled = true;
+      els.deleteWeightBtn.disabled = true;
       setStatus(`${state.trainedEpochs + 1}번째 epoch 학습 중`);
       setTrainProgress(0, '0% - batch 준비 중');
       const trainBatches = Math.ceil(Number(els.trainSizeInput.value) * 0.85 / 64);
@@ -1705,6 +1937,8 @@
       els.sampleBtn.disabled = false;
       els.inspectBtn.disabled = false;
       els.evalBtn.disabled = false;
+      els.saveWeightBtn.disabled = false;
+      refreshWeightSelect(els.savedWeightSelect.value);
     }
 
     async function handleSample() {
@@ -1720,6 +1954,9 @@
     els.sampleBtn.addEventListener('click', handleSample);
     els.inspectBtn.addEventListener('click', inspectLayer);
     els.evalBtn.addEventListener('click', evaluateFullTestSet);
+    els.saveWeightBtn.addEventListener('click', handleSaveWeights);
+    els.loadWeightBtn.addEventListener('click', handleLoadWeights);
+    els.deleteWeightBtn.addEventListener('click', handleDeleteWeight);
     els.convLayerSelect.addEventListener('change', () => {
       setStatus('레이어 수 변경 - 데이터 로드 필요');
       setTrainProgress(0, '데이터 로드 필요');
@@ -1727,6 +1964,8 @@
       els.sampleBtn.disabled = true;
       els.inspectBtn.disabled = true;
       els.evalBtn.disabled = true;
+      els.saveWeightBtn.disabled = true;
+      els.deleteWeightBtn.disabled = true;
     });
     els.epochInput.addEventListener('change', () => {
       els.epochText.textContent = `${state.trainedEpochs} / ${targetEpochs()}`;
@@ -1736,6 +1975,7 @@
     state.model = createModel();
     renderModelTable();
     updateTrainButton();
+    refreshWeightSelect();
     resetEvaluationReport();
     drawLossChart();
   </script>
