@@ -478,11 +478,44 @@
       align-items: end;
     }
 
+    .layer-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .layer-feature-section {
+      display: grid;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .layer-feature-section:first-child {
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .layer-feature-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+
+    .layer-feature-header strong {
+      font-size: 14px;
+    }
+
+    .layer-feature-header span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
     .feature-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
       gap: 10px;
-      min-height: 220px;
     }
 
     .feature-tile {
@@ -881,14 +914,11 @@
 
       <article id="layerPanel" class="panel">
         <h2>4. 레이어 뜯어보기</h2>
+        <p>선택한 샘플이 각 convolution/pooling 레이어를 지나며 어떻게 바뀌는지 한 번에 봅니다.</p>
         <div class="layer-tools">
-          <label>
-            볼 레이어
-            <select id="layerSelect"></select>
-          </label>
-          <button id="inspectBtn" disabled>Feature map 보기</button>
+          <button id="inspectBtn" disabled>전체 feature map 갱신</button>
         </div>
-        <div id="featureGrid" class="feature-grid">
+        <div id="featureGrid" class="layer-stack">
           <p>학습 전에도 convolution 레이어의 무작위 반응을 볼 수 있습니다. 학습 후에는 더 또렷한 패턴이 나옵니다.</p>
         </div>
       </article>
@@ -1057,7 +1087,6 @@
       sampleLabel: document.querySelector('#sampleLabel'),
       predictionList: document.querySelector('#predictionList'),
       modelTableBody: document.querySelector('#modelTableBody'),
-      layerSelect: document.querySelector('#layerSelect'),
       modelBadge: document.querySelector('#modelBadge'),
       featureGrid: document.querySelector('#featureGrid'),
       evalScopeText: document.querySelector('#evalScopeText'),
@@ -1148,24 +1177,13 @@
     }
 
     function renderModelTable() {
-      const inspectable = [];
       els.modelTableBody.innerHTML = '';
-      els.layerSelect.innerHTML = '';
       els.modelBadge.textContent = `Conv ${state.convLayerCount}개 + Pool ${Math.min(state.convLayerCount, 2)}개 + Dense 2개`;
       state.model.layers.forEach((layer) => {
         const shape = JSON.stringify(layer.outputShape);
         const row = document.createElement('tr');
         row.innerHTML = `<td>${layer.name}</td><td>${describeLayer(layer)}</td><td>${shape}</td>`;
         els.modelTableBody.appendChild(row);
-        if (layer.outputShape.length === 4) {
-          inspectable.push(layer);
-        }
-      });
-      inspectable.forEach((layer) => {
-        const option = document.createElement('option');
-        option.value = layer.name;
-        option.textContent = `${layer.name} ${JSON.stringify(layer.outputShape)}`;
-        els.layerSelect.appendChild(option);
       });
     }
 
@@ -1513,25 +1531,7 @@
       els.evalBtn.disabled = false;
     }
 
-    async function inspectLayer() {
-      if (!state.model || !state.testXs || !els.layerSelect.value) return;
-      els.featureGrid.innerHTML = '';
-      const layer = state.model.layers.find((item) => item.name === els.layerSelect.value);
-      if (!layer) return;
-      const activationModel = tf.model({ inputs: state.model.inputs, outputs: layer.output });
-      const activations = tf.tidy(() => {
-        const input = state.testXs.slice([state.currentIndex, 0, 0, 0], [1, 28, 28, 1]);
-        return activationModel.predict(input);
-      });
-      const shape = activations.shape;
-      const values = await activations.data();
-      activations.dispose();
-
-      if (shape.length !== 4) {
-        els.featureGrid.innerHTML = '<p>이 레이어는 이미지 형태 feature map이 아닙니다.</p>';
-        return;
-      }
-
+    function renderActivationTiles(container, values, shape) {
       const [, height, width, channels] = shape;
       const maxChannels = Math.min(channels, 32);
       for (let c = 0; c < maxChannels; c++) {
@@ -1567,7 +1567,40 @@
         const label = document.createElement('span');
         label.textContent = `ch ${c + 1}`;
         tile.append(canvas, label);
-        els.featureGrid.appendChild(tile);
+        container.appendChild(tile);
+      }
+    }
+
+    async function inspectLayer() {
+      if (!state.model || !state.testXs) return;
+      els.featureGrid.innerHTML = '';
+      const visualLayers = state.model.layers.filter((layer) => layer.outputShape.length === 4);
+      if (!visualLayers.length) {
+        els.featureGrid.innerHTML = '<p>이미지 형태 feature map을 가진 레이어가 없습니다.</p>';
+        return;
+      }
+
+      for (const layer of visualLayers) {
+        const activationModel = tf.model({ inputs: state.model.inputs, outputs: layer.output });
+        const activations = tf.tidy(() => {
+          const input = state.testXs.slice([state.currentIndex, 0, 0, 0], [1, 28, 28, 1]);
+          return activationModel.predict(input);
+        });
+        const shape = activations.shape;
+        const values = await activations.data();
+        activations.dispose();
+
+        const section = document.createElement('section');
+        section.className = 'layer-feature-section';
+        const header = document.createElement('div');
+        header.className = 'layer-feature-header';
+        header.innerHTML = `<strong>${layer.name}</strong><span>${JSON.stringify(layer.outputShape)} · 최대 32채널 표시</span>`;
+        const grid = document.createElement('div');
+        grid.className = 'feature-grid';
+        renderActivationTiles(grid, values, shape);
+        section.append(header, grid);
+        els.featureGrid.appendChild(section);
+        await tf.nextFrame();
       }
     }
 
@@ -1686,7 +1719,6 @@
     els.trainBtn.addEventListener('click', handleTrain);
     els.sampleBtn.addEventListener('click', handleSample);
     els.inspectBtn.addEventListener('click', inspectLayer);
-    els.layerSelect.addEventListener('change', inspectLayer);
     els.evalBtn.addEventListener('click', evaluateFullTestSet);
     els.convLayerSelect.addEventListener('change', () => {
       setStatus('레이어 수 변경 - 데이터 로드 필요');
