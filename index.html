@@ -489,6 +489,42 @@
       font-size: 13px;
     }
 
+    .augment-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .augment-card {
+      display: grid;
+      justify-items: center;
+      gap: 7px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfd;
+      text-align: center;
+    }
+
+    .augment-card canvas {
+      width: 70px;
+      height: 70px;
+      image-rendering: pixelated;
+      background: #111820;
+      border-radius: 5px;
+    }
+
+    .augment-card strong {
+      font-size: 13px;
+    }
+
+    .augment-card span {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
     .eval-report table {
       width: 100%;
       border-collapse: collapse;
@@ -876,6 +912,14 @@
       <div class="stat">
         <span>Test accuracy</span>
         <strong id="accText">-</strong>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>학습 augmentation은 무엇을 바꾸나</h2>
+      <p>정답 라벨은 그대로 두고 학습 이미지만 조금씩 흔들어 보여줍니다. 이 앱에서는 작은 위치 이동, 약한 노이즈, 밝기/대비 변화를 섞어서 모델이 같은 숫자의 여러 모습을 보게 합니다.</p>
+      <div id="augmentPreview" class="augment-grid">
+        <p>데이터를 로드하면 현재 샘플 기준 augmentation 예시가 표시됩니다.</p>
       </div>
     </section>
 
@@ -1355,6 +1399,7 @@
       sampleCanvas: document.querySelector('#sampleCanvas'),
       sampleLabel: document.querySelector('#sampleLabel'),
       predictionList: document.querySelector('#predictionList'),
+      augmentPreview: document.querySelector('#augmentPreview'),
       drawCanvas: document.querySelector('#drawCanvas'),
       drawPredictBtn: document.querySelector('#drawPredictBtn'),
       drawClearBtn: document.querySelector('#drawClearBtn'),
@@ -1867,22 +1912,92 @@
       return labelSet.map((label) => state.labelNames[label]).join(' 또는 ');
     }
 
-    function drawSample(index) {
-      if (!state.testXs) return;
-      const ctx = els.sampleCanvas.getContext('2d');
-      const image = tf.tidy(() => state.testXs.slice([index, 0, 0, 0], [1, 28, 28, 1]).reshape([28, 28]));
-      const pixels = image.dataSync();
+    function drawPixelsToCanvas(canvas, pixels) {
+      const ctx = canvas.getContext('2d');
       const imageData = ctx.createImageData(28, 28);
       for (let i = 0; i < pixels.length; i++) {
-        const v = Math.round(pixels[i] * 255);
+        const v = Math.round(clamp01(pixels[i]) * 255);
         imageData.data[i * 4] = v;
         imageData.data[i * 4 + 1] = v;
         imageData.data[i * 4 + 2] = v;
         imageData.data[i * 4 + 3] = 255;
       }
       ctx.putImageData(imageData, 0, 0);
+    }
+
+    function currentSamplePixels() {
+      const image = tf.tidy(() => state.testXs.slice([state.currentIndex, 0, 0, 0], [1, 28, 28, 1]).reshape([28, 28]));
+      const pixels = Array.from(image.dataSync());
       image.dispose();
+      return pixels;
+    }
+
+    function shiftedPixels(pixels, dx, dy) {
+      const shifted = new Float32Array(IMAGE_SIZE);
+      for (let y = 0; y < IMAGE_HEIGHT; y++) {
+        for (let x = 0; x < IMAGE_WIDTH; x++) {
+          const sourceX = x - dx;
+          const sourceY = y - dy;
+          shifted[y * IMAGE_WIDTH + x] =
+            sourceX >= 0 && sourceX < IMAGE_WIDTH && sourceY >= 0 && sourceY < IMAGE_HEIGHT
+              ? pixels[sourceY * IMAGE_WIDTH + sourceX]
+              : 0;
+        }
+      }
+      return Array.from(shifted);
+    }
+
+    function noisyPixels(pixels) {
+      return pixels.map((value, index) => {
+        const noise = (deterministicRandom((state.currentIndex + 1) * 1000 + index) - 0.5) * 0.38;
+        return clamp01(value + noise);
+      });
+    }
+
+    function contrastPixels(pixels) {
+      return pixels.map((value) => clamp01((value - 0.5) * 1.25 + 0.56));
+    }
+
+    function renderAugmentationPreview() {
+      if (!state.testXs) {
+        els.augmentPreview.innerHTML = '<p>데이터를 로드하면 현재 샘플 기준 augmentation 예시가 표시됩니다.</p>';
+        return;
+      }
+      const original = currentSamplePixels();
+      const shifted = shiftedPixels(original, 3, -2);
+      const noisy = noisyPixels(original);
+      const contrast = contrastPixels(original);
+      const combined = noisyPixels(contrastPixels(shiftedPixels(original, -2, 2)));
+      const examples = [
+        { title: '원본', desc: '평가에 쓰는 깨끗한 입력', pixels: original },
+        { title: '위치 이동', desc: '숫자가 2-3px 밀린 경우', pixels: shifted },
+        { title: '노이즈', desc: '픽셀값에 작은 잡음 추가', pixels: noisy },
+        { title: '대비/밝기', desc: '획의 진하기가 달라진 경우', pixels: contrast },
+        { title: '조합', desc: '이동 + 노이즈 + 대비 변화', pixels: combined }
+      ];
+
+      els.augmentPreview.innerHTML = '';
+      examples.forEach((example) => {
+        const card = document.createElement('div');
+        card.className = 'augment-card';
+        const canvas = document.createElement('canvas');
+        canvas.width = 28;
+        canvas.height = 28;
+        drawPixelsToCanvas(canvas, example.pixels);
+        const title = document.createElement('strong');
+        title.textContent = example.title;
+        const desc = document.createElement('span');
+        desc.textContent = example.desc;
+        card.append(canvas, title, desc);
+        els.augmentPreview.appendChild(card);
+      });
+    }
+
+    function drawSample(index) {
+      if (!state.testXs) return;
+      drawPixelsToCanvas(els.sampleCanvas, currentSamplePixels());
       els.sampleLabel.textContent = `정답 라벨: ${labelSetText(state.testLabelSets[index] || [state.testLabels[index]])}`;
+      renderAugmentationPreview();
     }
 
     async function predictCurrentSample() {

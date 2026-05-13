@@ -66,6 +66,20 @@ The experiment log is stored in browser local storage and can be cleared from th
 
 Students can draw a 28x28 grayscale input directly on the page and ask the current model to predict it. This is useful after training because it exposes the gap between clean dataset samples and messy human-drawn inputs.
 
+## Augmentation Preview
+
+Training-time augmentation keeps the label fixed but slightly changes the training image. In this lab, the augmentation toggle applies small random shifts, pixel noise, and brightness/contrast changes during training.
+
+The page also shows fixed visual examples for the currently selected sample:
+
+- Original: the clean test image.
+- Shift: the same image moved a few pixels.
+- Noise: small random changes added to pixel values.
+- Contrast/brightness: strokes become lighter, darker, or stronger.
+- Combined: shift, noise, and contrast change together.
+
+The point is not to create new labels, but to teach the model that the same class can appear in slightly different forms.
+
 ## Feature And Filter Views
 
 The app shows two different internal views:
